@@ -1,7 +1,11 @@
 import sys
+import os
 import raritan.rpc as rpc
 from raritan.rpc import devsettings, um, usermgmt, pdumodel, radius
 import csv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 with open('DEVICES.csv', newline='') as rarCSV:
     devices = csv.reader(rarCSV)
@@ -47,9 +51,9 @@ with open('DEVICES.csv', newline='') as rarCSV:
             blocked=False,
             needPasswordChange=False,
             auxInfo=usermgmt.AuxInfo(
-                fullname='techopsadmn',
+                fullname=os.getenv('PDU_USER'),
                 telephone='555-123-1234',
-                eMail='fac_tech-svcs@mentor.com'
+                eMail=os.getenv('EMAIL_ADD')
             ),
             snmpV3Settings=usermgmt.SnmpV3Settings(
                 enabled=True,
@@ -57,11 +61,11 @@ with open('DEVICES.csv', newline='') as rarCSV:
                 authProtocol=um.SnmpV3.AuthProtocol(0),
                 usePasswordAsAuthPassphrase=False,
                 haveAuthPassphrase=True,
-                authPassphrase='$iemens5Techops1',
+                authPassphrase=os.getenv('V3_AUTH_PASS'),
                 privProtocol=um.SnmpV3.PrivProtocol(0),
                 useAuthPassphraseAsPrivPassphrase=False,
                 havePrivPassphrase=True,
-                privPassphrase='$iemens5Secur320'
+                privPassphrase=os.getenv('V3_PRIV_PASS')
             ),
             sshPublicKey='',
             preferences=usermgmt.Preferences(
@@ -71,10 +75,10 @@ with open('DEVICES.csv', newline='') as rarCSV:
             ),
             roleIds=[0]  # role 0 = Administrator
         )
-        new_password = "$iemens5Techops1"
+        new_password = os.getenv('PDU_PASS')
         try:
             print('Trying to update existing account ...')
-            user_proxy = usermgmt.User('/auth/user/techopsadmn', agent)
+            user_proxy = usermgmt.User(f'/auth/user/{os.getenv("PDU_USER")}', agent)
             ret = user_proxy.updateAccountFull('', new_user)
             if ret == 0:
                 print('Account successfully updated.')
@@ -92,7 +96,7 @@ with open('DEVICES.csv', newline='') as rarCSV:
         except rpc.HttpException:
             print('Account not found; creating new one ...')
             usermgr_proxy = usermgmt.UserManager('/auth/user/', agent)
-            ret = usermgr_proxy.createAccountFull('techopsadmn', new_password, new_user)
+            ret = usermgr_proxy.createAccountFull({os.getenv("PDU_USER"), new_password, new_user)
             if ret == 0:
                 print('Account successfully created.')
             else:
